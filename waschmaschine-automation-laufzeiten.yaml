@@ -1,0 +1,54 @@
+alias: Waschmaschine - Laufzeiten verschieben
+description: Verschiebt die letzten drei Laufzeiten, wenn eine neue erkannt wird
+triggers:
+  - entity_id: sensor.waschmaschine_laufzeit_2
+    trigger: state
+conditions:
+  - condition: template
+    value_template: >
+      {% set raw = states('sensor.waschmaschine_laufzeit_2') %} {% if raw !=
+      'unknown' and raw != 'unavailable' and raw.count(':') == 2 %}
+        {% set parts = raw.split(':') %}
+        {% set h = parts[0] | int %}
+        {% set m = parts[1] | int %}
+        {% set s = parts[2] | int %}
+        {% set current_minutes = (h * 60 + m + s / 60) | round(1) %}
+        {% set last_minutes = states('input_number.waschmaschine_laufzeit_1') | float(0) %}
+        {% set time_diff = (as_timestamp(now()) - as_timestamp(states('input_datetime.waschmaschine_fertig'))) %}
+        {{ current_minutes != last_minutes and time_diff > 900 }}
+      {% else %}
+        false
+      {% endif %}
+actions:
+  - variables:
+      alt3: "{{ states('input_number.waschmaschine_laufzeit_2') | float | round(1) }}"
+      alt2: "{{ states('input_number.waschmaschine_laufzeit_1') | float | round(1) }}"
+      neu: >
+        {% set raw = states('sensor.waschmaschine_laufzeit_2') %} {% if raw !=
+        'unknown' and raw != 'unavailable' and raw.count(':') == 2 %}
+          {% set parts = raw.split(':') %}
+          {% set h = parts[0] | int %}
+          {% set m = parts[1] | int %}
+          {% set s = parts[2] | int %}
+          {{ (h * 60 + m + s / 60) | round(1) }}
+        {% else %}
+          {{ states('input_number.waschmaschine_laufzeit_1') | float | round(1) }}
+        {% endif %}
+  - target:
+      entity_id: input_number.waschmaschine_laufzeit_3
+    data:
+      value: "{{ alt3 }}"
+    action: input_number.set_value
+  - delay: "00:00:02"
+  - target:
+      entity_id: input_number.waschmaschine_laufzeit_2
+    data:
+      value: "{{ alt2 }}"
+    action: input_number.set_value
+  - delay: "00:00:02"
+  - target:
+      entity_id: input_number.waschmaschine_laufzeit_1
+    data:
+      value: "{{ neu }}"
+    action: input_number.set_value
+mode: single

@@ -1,0 +1,45 @@
+alias: Waschmaschine - Historie aktualisieren
+description: Aktualisiert die Historie der letzten Waschmaschinen-Läufe
+triggers:
+  - entity_id: input_boolean.waschmaschine_fertig
+    from: "off"
+    to: "on"
+    trigger: state
+conditions:
+  - condition: template
+    value_template: >
+      {{ (as_timestamp(now()) -
+      as_timestamp(states('input_datetime.waschmaschine_fertig'))) > 900 }}
+actions:
+  - variables:
+      alt3: "{{ states('input_datetime.waschmaschine_fertig_3') }}"
+      alt2: "{{ states('input_datetime.waschmaschine_fertig_2') }}"
+      alt1: "{{ states('input_datetime.waschmaschine_fertig') }}"
+  - delay: "00:00:02"
+  - target:
+      entity_id: input_datetime.waschmaschine_fertig_3
+    data:
+      datetime: "{{ alt2 }}"
+    action: input_datetime.set_datetime
+  - delay: "00:00:02"
+  - target:
+      entity_id: input_datetime.waschmaschine_fertig_2
+    data:
+      datetime: "{{ alt1 }}"
+    action: input_datetime.set_datetime
+  - delay: "00:00:02"
+  - target:
+      entity_id: input_datetime.waschmaschine_fertig
+    data:
+      datetime: "{{ now().strftime('%Y-%m-%d %H:%M:%S') }}"
+    action: input_datetime.set_datetime
+  - delay: "00:00:02"
+  - data:
+      name: Waschmaschine Historie
+      message: >
+        Historie aktualisiert: Aktuell: {{
+        states('input_datetime.waschmaschine_fertig') }}, Vorheriger: {{
+        states('input_datetime.waschmaschine_fertig_2') }}, Vorletzter: {{
+        states('input_datetime.waschmaschine_fertig_3') }}
+    action: logbook.log
+mode: single

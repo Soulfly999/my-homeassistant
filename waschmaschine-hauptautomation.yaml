@@ -1,0 +1,94 @@
+alias: Waschmaschine Automation
+description: Überwacht den Waschmaschinen-Status basierend auf Stromverbrauch
+triggers:
+  - entity_id: sensor.waschmaschine_power
+    above: 9
+    id: waschmaschine_an
+    trigger: numeric_state
+  - entity_id: sensor.waschmaschine_power
+    below: 1
+    for:
+      minutes: 2
+    id: waschmaschine_aus
+    trigger: numeric_state
+conditions: []
+actions:
+  - choose:
+      - conditions:
+          - condition: trigger
+            id: waschmaschine_an
+          - condition: state
+            entity_id: input_boolean.waschmaschine_lauft
+            state: "off"
+          - condition: numeric_state
+            entity_id: sensor.waschmaschine_power
+            above: 9
+        sequence:
+          - target:
+              entity_id: input_boolean.waschmaschine_fertig
+            action: input_boolean.turn_off
+            data: {}
+          - target:
+              entity_id: input_boolean.waschmaschine_lauft
+            action: input_boolean.turn_on
+            data: {}
+          - target:
+              entity_id: input_datetime.waschmaschine_startzeit
+            data:
+              timestamp: "{{ now().timestamp() }}"
+            action: input_datetime.set_datetime
+          - data:
+              name: Waschmaschine
+              domain: automation
+              message: >
+                Waschmaschine gestartet um {{ now().strftime('%H:%M %d-%m-%Y')
+                }} (Leistung: {{ states('sensor.waschmaschine_power') }}W)
+            action: logbook.log
+      - conditions:
+          - condition: trigger
+            id: waschmaschine_aus
+          - condition: state
+            entity_id: input_boolean.waschmaschine_lauft
+            state: "on"
+          - condition: numeric_state
+            entity_id: sensor.waschmaschine_power
+            below: 1
+        sequence:
+          - target:
+              entity_id: input_boolean.waschmaschine_lauft
+            action: input_boolean.turn_off
+            data: {}
+          - target:
+              entity_id: input_boolean.waschmaschine_fertig
+            action: input_boolean.turn_on
+            data: {}
+          - target:
+              entity_id: input_datetime.waschmaschine_fertig
+            data:
+              timestamp: "{{ now().timestamp() }}"
+            action: input_datetime.set_datetime
+          - data:
+              name: Waschmaschine
+              domain: automation
+              message: >
+                Waschmaschine beendet um {{ now().strftime('%H:%M %d-%m-%Y') }}
+                (Laufzeit: {{
+                ((state_attr('input_datetime.waschmaschine_fertig', 'timestamp')
+                | float -  state_attr('input_datetime.waschmaschine_startzeit',
+                'timestamp') | float) / 60) | round(1) }} Minuten)
+            action: logbook.log
+          - data:
+              title: Waschmaschine
+              message: 🧺 Wäsche ist fertig!
+            action: notify.notify
+          - target:
+              entity_id: input_number.waschmaschine_laufzeit_1
+            data:
+              value: >
+                {% set start =
+                state_attr('input_datetime.waschmaschine_startzeit',
+                'timestamp') | float %} {% set ende =
+                state_attr('input_datetime.waschmaschine_fertig', 'timestamp') |
+                float %} {{ ((ende - start) / 60) | round(1) }}
+            action: input_number.set_value
+mode: single
