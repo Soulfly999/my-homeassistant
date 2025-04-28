@@ -1,0 +1,26 @@
+square: false
+type: grid
+columns: 2
+cards:
+  - type: markdown
+    content: |
+      ### 🧺 Letzte Waschgänge
+      **1.** {{
+        as_timestamp(states('input_datetime.waschmaschine_fertig')) | timestamp_custom('%d.%m.%Y %H:%M')
+      }}
+
+      **2.** {{
+        as_timestamp(states('input_datetime.waschmaschine_fertig_2')) | timestamp_custom('%d.%m.%Y %H:%M')
+      }}
+
+      **3.** {{
+        as_timestamp(states('input_datetime.waschmaschine_fertig_3')) | timestamp_custom('%d.%m.%Y %H:%M')
+      }}
+  - type: markdown
+    content: |
+      ### ⏱️ Laufzeiten (Min.)
+      **1.** {{ states('input_number.waschmaschine_laufzeit_1') }} min  
+
+      **2.** {{ states('input_number.waschmaschine_laufzeit_2') }} min  
+
+      **3.** {{ states('input_number.waschmaschine_laufzeit_3') }} min

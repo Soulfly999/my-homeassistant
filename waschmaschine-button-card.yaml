@@ -1,0 +1,211 @@
+type: custom:button-card
+entity: sensor.waschmaschine_status
+name: Waschmaschine
+icon: mdi:washing-machine
+show_state: false
+show_label: false
+custom_fields:
+  status: |
+    [[[
+      const laufend = states['input_boolean.waschmaschine_lauft']?.state === 'on';
+      const fertig = states['input_boolean.waschmaschine_fertig']?.state === 'on';
+      
+      const getDuration = (datetimeEntityId) => {
+        const dateStr = states[datetimeEntityId]?.state;
+        if (!dateStr) return null;
+        const startTime = new Date(dateStr);
+        const now = new Date();
+        const diffMs = now - startTime;
+        const totalMin = Math.floor(diffMs / 60000);
+        const hours = Math.floor(totalMin / 60);
+        const minutes = totalMin % 60;
+        let result = '';
+        if (hours > 0) result += `${hours} Std. `;
+        if (minutes > 0 || hours === 0) result += `${minutes} Min`;
+        return result.trim();
+      };
+
+      if (laufend) {
+        const seit = getDuration('input_datetime.waschmaschine_startzeit');
+        return seit ? `🌀 Läuft seit ${seit}` : '🌀 Läuft';
+      }
+
+      if (fertig) {
+        const seit = getDuration('input_datetime.waschmaschine_fertig');
+        return seit ? `✅ Fertig seit ${seit}` : '✅ Fertig';
+      }
+
+      return '🛑 Aus';
+    ]]]
+  info: |
+    [[[
+      const laufend = states['input_boolean.waschmaschine_lauft']?.state === 'on';
+      const fertig = states['input_boolean.waschmaschine_fertig']?.state === 'on';
+      const powerRaw = parseFloat(states['sensor.waschmaschine_power']?.state || '0');
+      const power = powerRaw > 0 ? ` · ⚡ ${powerRaw} W` : '';
+
+      if (laufend) {
+        const fortschritt = states['sensor.waschmaschine_fortschritt']?.state || '–';
+        const verbleibend = states['sensor.waschmaschine_verbleibend']?.state || '–';
+        return `<div style="margin-top: 10px;">${fortschritt}% · ⏳ ${verbleibend} Min${power}</div>`;
+      }
+
+      if (fertig) return `<div style="margin-top: 10px;">🧺 Wäsche fertig${power}</div>`;
+      return `<div style="margin-top: 10px;">☑️ Bereit${power}</div>`;
+    ]]]
+  progress: |
+    [[[
+      const laufend = states['input_boolean.waschmaschine_lauft']?.state === 'on';
+      if (!laufend) return '';
+
+      const fortschritt = parseInt(states['sensor.waschmaschine_fortschritt']?.state || 0);
+      return `
+        <div style="background: rgba(255,255,255,0.25); height: 8px; border-radius: 4px; overflow: hidden; margin-top: 12px;">
+          <div style="width: ${fortschritt}%; background: #ffffff; height: 100%; transition: width 0.4s ease-in-out;"></div>
+        </div>
+      `;
+    ]]]
+  zaehler: |
+    [[[
+      const starts = states['sensor.tageszahler_waschmaschine']?.state || '0';
+      const tag = states['sensor.waschmaschine_taglich']?.state || '–';
+      const monat = states['sensor.waschmaschine_monatlich']?.state || '–';
+      return `🔁 ${starts} · ${tag} kWh · ${monat} kWh`;
+    ]]]
+styles:
+  card:
+    - height: 300px
+    - border-radius: 18px
+    - padding: 14px
+    - background: |
+        [[[
+          if (states['input_boolean.waschmaschine_lauft']?.state === 'on')
+            return "linear-gradient(145deg, #2196f3, #1976d2)";
+          if (states['input_boolean.waschmaschine_fertig']?.state === 'on')
+            return "linear-gradient(145deg, #4caf50, #2e7d32)";
+          return "var(--card-background-color)";
+        ]]]
+    - color: |
+        [[[
+          if (
+            states['input_boolean.waschmaschine_lauft']?.state === 'on' ||
+            states['input_boolean.waschmaschine_fertig']?.state === 'on'
+          ) return "white";
+          return "var(--primary-text-color)";
+        ]]]
+    - box-shadow: 0 6px 14px rgba(0, 0, 0, 0.15)
+    - transition: all 0.3s ease
+  grid:
+    - grid-template-areas: |
+        "i"
+        "n"
+        "status"
+        "info"
+        "progress"
+        "zaehler"
+    - grid-template-rows: 1fr auto auto auto auto auto
+    - grid-template-columns: 1fr
+  name:
+    - font-weight: 600
+    - font-size: 1.3em
+    - letter-spacing: 0.3px
+  icon:
+    - animation: |
+        [[[
+          if (states['input_boolean.waschmaschine_lauft']?.state === 'on')
+            return "pulse 2s infinite ease-in-out";
+          if (states['input_boolean.waschmaschine_fertig']?.state === 'on')
+            return "blink 1.2s infinite ease-in-out";
+          return "none";
+        ]]]
+  custom_fields:
+    status:
+      - text-align: center
+      - font-size: 1em
+      - font-weight: 500
+      - opacity: 0.9
+      - padding-top: 4px
+    info:
+      - text-align: center
+      - font-size: 1em
+      - font-weight: 500
+      - opacity: 0.85
+    progress:
+      - width: 100%
+    zaehler:
+      - text-align: center
+      - font-size: 0.95em
+      - padding-top: 12px
+      - opacity: 0.75
+tap_action:
+  action: fire-dom-event
+  browser_mod:
+    service: browser_mod.popup
+    data:
+      title: Waschmaschine zurücksetzen?
+      size: normal
+      content:
+        type: vertical-stack
+        cards:
+          - type: markdown
+            content: |
+              {% if is_state('input_boolean.waschmaschine_fertig', 'on') %}
+                Möchtest du den Status **"Fertig"** der Waschmaschine zurücksetzen?
+              {% else %}
+                Waschmaschine ist aktuell **nicht fertig** – kein Zurücksetzen nötig.
+              {% endif %}
+          - type: conditional
+            conditions:
+              - entity: input_boolean.waschmaschine_fertig
+                state: "on"
+            card:
+              type: horizontal-stack
+              cards:
+                - type: custom:button-card
+                  name: ❌ Abbrechen
+                  icon: mdi:close
+                  tap_action:
+                    action: fire-dom-event
+                    browser_mod:
+                      service: browser_mod.close_popup
+                  styles:
+                    card:
+                      - border-radius: 12px
+                      - background: rgba(255, 255, 255, 0.1)
+                      - color: var(--primary-text-color)
+                      - box-shadow: none
+                      - padding: 12px
+                      - height: 50px
+                - type: custom:button-card
+                  name: ✅ Zurücksetzen
+                  icon: mdi:restart
+                  tap_action:
+                    action: fire-dom-event
+                    browser_mod:
+                      service: browser_mod.sequence
+                      data:
+                        sequence:
+                          - service: input_boolean.turn_off
+                            data:
+                              entity_id: input_boolean.waschmaschine_fertig
+                          - service: browser_mod.close_popup
+                  styles:
+                    card:
+                      - border-radius: 12px
+                      - background: linear-gradient(145deg,
+                      - color: white
+                      - box-shadow: 0 4px 10px rgba(0,0,0,0.2)
+                      - padding: 12px
+                      - height: 50px
+extra_styles: |
+  @keyframes blink {
+    0% { opacity: 1; }
+    50% { opacity: 0.4; }
+    100% { opacity: 1; }
+  }
+
+  @keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+    100% { transform: scale(1); }
+  }

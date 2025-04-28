@@ -1,0 +1,52 @@
+type: custom:bar-card
+entities:
+  - entity: sensor.waschmaschine_fortschritt
+    name: Waschmaschine
+    icon: mdi:washing-machine
+    color: auto
+    show_value: true
+    show_icon: true
+    show_name: true
+    unit_of_measurement: "%"
+    severity:
+      - from: 0
+        to: 30
+        color: "#3498db"
+      - from: 31
+        to: 70
+        color: "#f1c40f"
+      - from: 71
+        to: 100
+        color: "#2ecc71"
+height: 28px
+round: true
+icon_position: inside
+value_style: slider
+title_position: top
+width: 100%
+animation:
+  state: "on"
+  speed: 1.5
+style: |
+  ha-card {
+    height: 300px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    border-radius: 16px;
+    padding: 12px;
+    background: var(--card-background-color);
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15);
+  }
+
+  .bar-card-name {
+    font-weight: 600;
+    font-size: 1em;
+    padding-bottom: 4px;
+  }
+
+  .bar-card-value {
+    font-weight: bold;
+    font-size: 0.95em;
+    color: #ffffff;
+  }
