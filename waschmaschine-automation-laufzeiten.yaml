@@ -1,5 +1,7 @@
 alias: Waschmaschine - Laufzeiten verschieben
-description: Verschiebt die letzten drei Laufzeiten, wenn eine neue erkannt wird
+description: >
+  Verschiebt die letzten drei Laufzeiten, wenn eine neue erkannt wird, mit
+  Validierung
 triggers:
   - entity_id: sensor.waschmaschine_laufzeit_2
     trigger: state
@@ -14,15 +16,15 @@ conditions:
         {% set s = parts[2] | int %}
         {% set current_minutes = (h * 60 + m + s / 60) | round(1) %}
         {% set last_minutes = states('input_number.waschmaschine_laufzeit_1') | float(0) %}
-        {% set time_diff = (as_timestamp(now()) - as_timestamp(states('input_datetime.waschmaschine_fertig'))) %}
-        {{ current_minutes != last_minutes and time_diff > 900 }}
+        {{ current_minutes != last_minutes and current_minutes > last_minutes }}
       {% else %}
         false
       {% endif %}
 actions:
   - variables:
-      alt3: "{{ states('input_number.waschmaschine_laufzeit_2') | float | round(1) }}"
-      alt2: "{{ states('input_number.waschmaschine_laufzeit_1') | float | round(1) }}"
+      alt3: "{{ states('input_number.waschmaschine_laufzeit_3') | float | round(1) }}"
+      alt2: "{{ states('input_number.waschmaschine_laufzeit_2') | float | round(1) }}"
+      alt1: "{{ states('input_number.waschmaschine_laufzeit_1') | float | round(1) }}"
       neu: >
         {% set raw = states('sensor.waschmaschine_laufzeit_2') %} {% if raw !=
         'unknown' and raw != 'unavailable' and raw.count(':') == 2 %}
@@ -32,23 +34,26 @@ actions:
           {% set s = parts[2] | int %}
           {{ (h * 60 + m + s / 60) | round(1) }}
         {% else %}
-          {{ states('input_number.waschmaschine_laufzeit_1') | float | round(1) }}
+          {{ alt1 }}
         {% endif %}
-  - target:
-      entity_id: input_number.waschmaschine_laufzeit_3
-    data:
-      value: "{{ alt3 }}"
-    action: input_number.set_value
-  - delay: "00:00:02"
-  - target:
-      entity_id: input_number.waschmaschine_laufzeit_2
-    data:
-      value: "{{ alt2 }}"
-    action: input_number.set_value
-  - delay: "00:00:02"
-  - target:
-      entity_id: input_number.waschmaschine_laufzeit_1
-    data:
-      value: "{{ neu }}"
-    action: input_number.set_value
+  - choose:
+      - conditions:
+          - condition: template
+            value_template: "{{ neu > alt1 }}"
+        sequence:
+          - target:
+              entity_id: input_number.waschmaschine_laufzeit_3
+            data:
+              value: "{{ alt2 }}"
+            action: input_number.set_value
+          - target:
+              entity_id: input_number.waschmaschine_laufzeit_2
+            data:
+              value: "{{ alt1 }}"
+            action: input_number.set_value
+          - target:
+              entity_id: input_number.waschmaschine_laufzeit_1
+            data:
+              value: "{{ neu }}"
+            action: input_number.set_value
 mode: single

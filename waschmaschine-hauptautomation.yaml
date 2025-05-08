@@ -20,9 +20,6 @@ actions:
           - condition: state
             entity_id: input_boolean.waschmaschine_lauft
             state: "off"
-          - condition: numeric_state
-            entity_id: sensor.waschmaschine_power
-            above: 9
         sequence:
           - target:
               entity_id: input_boolean.waschmaschine_fertig
@@ -50,10 +47,29 @@ actions:
           - condition: state
             entity_id: input_boolean.waschmaschine_lauft
             state: "on"
-          - condition: numeric_state
-            entity_id: sensor.waschmaschine_power
-            below: 1
         sequence:
+          - variables:
+              ts_fertig: >-
+                {{ state_attr('input_datetime.waschmaschine_fertig',
+                'timestamp') | default(0) }}
+              ts_fertig_2: >-
+                {{ state_attr('input_datetime.waschmaschine_fertig_2',
+                'timestamp') | default(0) }}
+          - target:
+              entity_id: input_datetime.waschmaschine_fertig_3
+            data:
+              timestamp: "{{ ts_fertig_2 }}"
+            action: input_datetime.set_datetime
+          - target:
+              entity_id: input_datetime.waschmaschine_fertig_2
+            data:
+              timestamp: "{{ ts_fertig }}"
+            action: input_datetime.set_datetime
+          - target:
+              entity_id: input_datetime.waschmaschine_fertig
+            data:
+              timestamp: "{{ now().timestamp() }}"
+            action: input_datetime.set_datetime
           - target:
               entity_id: input_boolean.waschmaschine_lauft
             action: input_boolean.turn_off
@@ -62,11 +78,6 @@ actions:
               entity_id: input_boolean.waschmaschine_fertig
             action: input_boolean.turn_on
             data: {}
-          - target:
-              entity_id: input_datetime.waschmaschine_fertig
-            data:
-              timestamp: "{{ now().timestamp() }}"
-            action: input_datetime.set_datetime
           - data:
               name: Waschmaschine
               domain: automation
@@ -74,8 +85,8 @@ actions:
                 Waschmaschine beendet um {{ now().strftime('%H:%M %d-%m-%Y') }}
                 (Laufzeit: {{
                 ((state_attr('input_datetime.waschmaschine_fertig', 'timestamp')
-                | float -  state_attr('input_datetime.waschmaschine_startzeit',
-                'timestamp') | float) / 60) | round(1) }} Minuten)
+                | float -
+                  state_attr('input_datetime.waschmaschine_startzeit', 'timestamp') | float) / 60) | round(1) }} Minuten)
             action: logbook.log
           - data:
               title: Waschmaschine

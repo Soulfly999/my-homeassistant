@@ -9,6 +9,7 @@ custom_fields:
     [[[
       const laufend = states['input_boolean.waschmaschine_lauft']?.state === 'on';
       const fertig = states['input_boolean.waschmaschine_fertig']?.state === 'on';
+      const ausgeleert = states['input_boolean.wasche_ausgeleert']?.state === 'on';
       
       const getDuration = (datetimeEntityId) => {
         const dateStr = states[datetimeEntityId]?.state;
@@ -35,12 +36,17 @@ custom_fields:
         return seit ? `✅ Fertig seit ${seit}` : '✅ Fertig';
       }
 
+      if (ausgeleert) {
+        return '🧺 Wäsche ausgeleert';
+      }
+
       return '🛑 Aus';
     ]]]
   info: |
     [[[
       const laufend = states['input_boolean.waschmaschine_lauft']?.state === 'on';
       const fertig = states['input_boolean.waschmaschine_fertig']?.state === 'on';
+      const ausgeleert = states['input_boolean.wasche_ausgeleert']?.state === 'on';
       const powerRaw = parseFloat(states['sensor.waschmaschine_power']?.state || '0');
       const power = powerRaw > 0 ? ` · ⚡ ${powerRaw} W` : '';
 
@@ -51,6 +57,7 @@ custom_fields:
       }
 
       if (fertig) return `<div style="margin-top: 10px;">🧺 Wäsche fertig${power}</div>`;
+      if (ausgeleert) return `<div style="margin-top: 10px;">✨ Bereit für neue Wäsche${power}</div>`;
       return `<div style="margin-top: 10px;">☑️ Bereit${power}</div>`;
     ]]]
   progress: |
